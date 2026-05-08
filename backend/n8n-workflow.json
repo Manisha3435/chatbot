@@ -1,0 +1,77 @@
+{
+  "name": "Chatbot Webhook Automation",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "chat",
+        "options": {}
+      },
+      "id": "1",
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [250, 300],
+      "webhookId": "chat-webhook"
+    },
+    {
+      "parameters": {
+        "keepOnlySet": true,
+        "values": {
+          "string": [
+            { "name": "intent", "value": "={{ $json.body.intent }}" },
+            { "name": "message", "value": "={{ $json.body.message }}" },
+            { "name": "reply", "value": "={{ $json.body.reply }}" },
+            { "name": "timestamp", "value": "={{ $json.body.timestamp }}" }
+          ]
+        },
+        "options": {}
+      },
+      "id": "3",
+      "name": "Extract Webhook Data",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 1,
+      "position": [450, 300]
+    },
+    {
+      "parameters": {
+        "operation": "insert",
+        "schema": "public",
+        "table": "messages",
+        "columns": "intent, message, reply, timestamp"
+      },
+      "id": "2",
+      "name": "Save to Context DB",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 1,
+      "position": [650, 300]
+    }
+  ],
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Extract Webhook Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract Webhook Data": {
+      "main": [
+        [
+          {
+            "node": "Save to Context DB",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {},
+  "versionId": "2"
+}
