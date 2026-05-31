@@ -20,7 +20,7 @@ const AdminHistory = ({ requesterEmail, isAdmin }) => {
     console.log('AdminHistory.loadMessages', { requesterEmail, trimmedFilter });
 
     try {
-      const response = await axios.get('http://localhost:5000/api/messages', {
+      const response = await axios.get('https://chatbot-83b2.onrender.com/api/messages', {
         params: {
           requester_email: requesterEmail,
           ...(trimmedFilter ? { user_email: trimmedFilter } : {}),

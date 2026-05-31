@@ -39,7 +39,7 @@ const ChatBox = ({ user }) => {
     setIsTyping(true);
 
     try {
-      const response = await axios.post('http://localhost:5000/api/chat', {
+      const response = await axios.post('https://chatbot-83b2.onrender.com/api/chat', {
         message: userMessage.text,
         userEmail: user?.email,
         userName: user?.name,
