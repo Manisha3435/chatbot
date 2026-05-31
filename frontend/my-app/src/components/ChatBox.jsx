@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import axios from 'axios';
 import { Send, Bot, User, Sparkles, Mic, MicOff, Volume2, VolumeX } from 'lucide-react';
 
-const ChatBox = () => {
+const ChatBox = ({ user }) => {
   const [messages, setMessages] = useState([
     { id: 1, type: 'ai', text: 'Welcome to the Vertex Digital dashboard! I am your AI assistant. How can I help you build and deploy today?' }
   ]);
@@ -40,7 +40,9 @@ const ChatBox = () => {
 
     try {
       const response = await axios.post('http://localhost:5000/api/chat', {
-        message: userMessage.text
+        message: userMessage.text,
+        userEmail: user?.email,
+        userName: user?.name,
       });
       
       const aiMessage = { 

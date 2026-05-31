@@ -1,9 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import ChatBox from './components/ChatBox';
 import Login from './components/Login';
+import Signup from './components/Signup';
+import AdminHistory from './components/AdminHistory';
 import { 
   BrainCircuit, Zap, Server, MessageSquare, ArrowRight,
   Database, Info, Briefcase, Globe, Package, Users, Mail, X,
+  Menu,
   Code, Layout, Cloud, Shield, Cpu, Activity, MapPin, Phone, ChevronRight,
   Smartphone, Monitor, PenTool, CheckCircle, Layers
 } from 'lucide-react';
@@ -297,9 +300,116 @@ const ContactPage = () => {
 // --- MAIN APP COMPONENT ---
 
 function App() {
-  const [authStatus, setAuthStatus] = useState('landing'); // 'landing' | 'login' | 'authenticated'
+  const [authStatus, setAuthStatus] = useState('landing'); // 'landing' | 'login' | 'signup' | 'authenticated'
+  const [currentUser, setCurrentUser] = useState(null);
+  const [isAdmin, setIsAdmin] = useState(false);
+  const [loginError, setLoginError] = useState('');
+  const [loginLoading, setLoginLoading] = useState(false);
+  const [signupError, setSignupError] = useState('');
+  const [signupLoading, setSignupLoading] = useState(false);
+  const [signupSuccess, setSignupSuccess] = useState('');
   const [currentPage, setCurrentPage] = useState('home');
+  const [menuOpen, setMenuOpen] = useState(false);
   const [isChatOpen, setIsChatOpen] = useState(false);
+
+  useEffect(() => {
+    const savedUser = window.localStorage.getItem('pgadmindb_user');
+    if (savedUser) {
+      try {
+        const parsedUser = JSON.parse(savedUser);
+        setCurrentUser(parsedUser);
+        setIsAdmin(parsedUser.isAdmin === true);
+        setAuthStatus('authenticated');
+        setCurrentPage('home');
+      } catch (err) {
+        console.warn('Failed to restore auth state:', err);
+        window.localStorage.removeItem('pgadmindb_user');
+      }
+    }
+  }, []);
+
+  const handleLogin = async ({ email, password }) => {
+    setLoginError('');
+    setLoginLoading(true);
+
+    try {
+      const response = await fetch('http://localhost:5000/api/login', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ email, password }),
+      });
+
+      const data = await response.json();
+      if (!response.ok) {
+        throw new Error(data.error || 'Login failed');
+      }
+
+      setCurrentUser(data.user);
+      setIsAdmin(data.user.isAdmin === true);
+      setAuthStatus('authenticated');
+      setCurrentPage('home');
+      setIsChatOpen(true);
+      window.localStorage.setItem('pgadmindb_user', JSON.stringify(data.user));
+    } catch (err) {
+      setLoginError(err.message);
+    } finally {
+      setLoginLoading(false);
+    }
+  };
+
+  const handleLogout = () => {
+    setAuthStatus('landing');
+    setCurrentUser(null);
+    setIsAdmin(false);
+    setCurrentPage('home');
+    setMenuOpen(false);
+    setIsChatOpen(false);
+    setLoginError('');
+    setSignupError('');
+    setSignupSuccess('');
+    window.localStorage.removeItem('pgadmindb_user');
+  };
+
+  const navigateTo = (page) => {
+    setCurrentPage(page);
+    setMenuOpen(false);
+  };
+
+  const handleSignup = async ({ name, email, password }) => {
+    setSignupError('');
+    setSignupLoading(true);
+    setSignupSuccess('');
+
+    try {
+      const response = await fetch('http://localhost:5000/api/signup', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ name, email, password }),
+      });
+
+      const data = await response.json();
+      if (!response.ok) {
+        throw new Error(data.error || 'Signup failed');
+      }
+
+      const newUser = { name, email, isAdmin: false };
+      setCurrentUser(newUser);
+      setIsAdmin(false);
+      setAuthStatus('authenticated');
+      setCurrentPage('home');
+      setIsChatOpen(true);
+      window.localStorage.setItem('pgadmindb_user', JSON.stringify(newUser));
+      setSignupSuccess('Account created successfully. You are now signed in.');
+    } catch (err) {
+      setSignupError(err.message);
+    } finally {
+      setSignupLoading(false);
+    }
+  };
 
   // Automatically pop open the chat after a brief delay when reaching the dashboard
   useEffect(() => {
@@ -325,6 +435,8 @@ function App() {
         return <CareerPage />;
       case 'contact':
         return <ContactPage />;
+      case 'history':
+        return <AdminHistory requesterEmail={currentUser?.email} isAdmin={isAdmin} />;
       case 'home':
       default:
         // Dashboard Overview View
@@ -450,7 +562,29 @@ function App() {
 
   // 2. Login Page View
   if (authStatus === 'login') {
-    return <Login onLogin={() => setAuthStatus('authenticated')} onBack={() => setAuthStatus('landing')} />;
+    return (
+      <Login
+        onSubmit={handleLogin}
+        onBack={() => { setAuthStatus('landing'); setLoginError(''); setSignupSuccess(''); }}
+        onCreateAccount={() => { setAuthStatus('signup'); setSignupError(''); setSignupSuccess(''); }}
+        error={loginError}
+        loading={loginLoading}
+        infoMessage={signupSuccess}
+      />
+    );
+  }
+
+  // 2b. Signup Page View
+  if (authStatus === 'signup') {
+    return (
+      <Signup
+        onSubmit={handleSignup}
+        onBack={() => { setAuthStatus('login'); setSignupError(''); setSignupSuccess(''); }}
+        loading={signupLoading}
+        error={signupError}
+        successMessage={signupSuccess}
+      />
+    );
   }
 
   // 3. Authenticated Main View
@@ -461,14 +595,64 @@ function App() {
           <BrainCircuit size={32} color="#8b5cf6" />
           <span>Vertex Digital</span>
         </div>
-        <div className="nav-links">
-          <a href="#" onClick={(e) => { e.preventDefault(); setCurrentPage('home'); }} style={{ color: currentPage === 'home' ? '#fff' : '' }}>Home</a>
-          <a href="#" onClick={(e) => { e.preventDefault(); setCurrentPage('about'); }} style={{ color: currentPage === 'about' ? '#fff' : '' }}>About</a>
-          <a href="#" onClick={(e) => { e.preventDefault(); setCurrentPage('services'); }} style={{ color: currentPage === 'services' ? '#fff' : '' }}>Services</a>
-          <a href="#" onClick={(e) => { e.preventDefault(); setCurrentPage('domain'); }} style={{ color: currentPage === 'domain' ? '#fff' : '' }}>Domain & Hosting</a>
-          <a href="#" onClick={(e) => { e.preventDefault(); setCurrentPage('products'); }} style={{ color: currentPage === 'products' ? '#fff' : '' }}>Products</a>
-          <a href="#" onClick={(e) => { e.preventDefault(); setCurrentPage('careers'); }} style={{ color: currentPage === 'careers' ? '#fff' : '' }}>Project Career</a>
-          <a href="#" onClick={(e) => { e.preventDefault(); setCurrentPage('contact'); }} style={{ color: currentPage === 'contact' ? '#fff' : '' }}>Contact</a>
+        {menuOpen && (
+          <div className="mobile-menu-panel" role="dialog" aria-hidden={!menuOpen}>
+            <div className="mobile-menu-cards">
+              <div className="mobile-menu-card">
+                <div style={{display:'flex',justifyContent:'space-between',alignItems:'center'}}>
+                  <strong>Active Client Projects</strong>
+                </div>
+                <div className="menu-card-number">8</div>
+                <div className="menu-card-sub">+2 this month</div>
+              </div>
+              <div className="mobile-menu-card">
+                <strong>Server Uptime</strong>
+                <div className="menu-card-number">99.99%</div>
+              </div>
+            </div>
+          </div>
+        )}
+        <button
+          className="nav-toggle"
+          type="button"
+          aria-label={menuOpen ? 'Close menu' : 'Open menu'}
+          onClick={() => setMenuOpen((open) => !open)}
+        >
+          {menuOpen ? <X size={24} /> : <Menu size={24} />}
+        </button>
+        <div className={`nav-links ${menuOpen ? 'open' : ''}`}>
+          <a href="#" onClick={(e) => { e.preventDefault(); navigateTo('home'); }} style={{ color: currentPage === 'home' ? '#fff' : '' }}>Home</a>
+          <a href="#" onClick={(e) => { e.preventDefault(); navigateTo('about'); }} style={{ color: currentPage === 'about' ? '#fff' : '' }}>About</a>
+          <a href="#" onClick={(e) => { e.preventDefault(); navigateTo('services'); }} style={{ color: currentPage === 'services' ? '#fff' : '' }}>Services</a>
+          <a href="#" onClick={(e) => { e.preventDefault(); navigateTo('domain'); }} style={{ color: currentPage === 'domain' ? '#fff' : '' }}>Domain & Hosting</a>
+          <a href="#" onClick={(e) => { e.preventDefault(); navigateTo('products'); }} style={{ color: currentPage === 'products' ? '#fff' : '' }}>Products</a>
+          <a href="#" onClick={(e) => { e.preventDefault(); navigateTo('careers'); }} style={{ color: currentPage === 'careers' ? '#fff' : '' }}>Project Career</a>
+          <a href="#" onClick={(e) => { e.preventDefault(); navigateTo('contact'); }} style={{ color: currentPage === 'contact' ? '#fff' : '' }}>Contact</a>
+          {authStatus === 'authenticated' && (
+            <a href="#" onClick={(e) => { e.preventDefault(); navigateTo('history'); }} style={{ color: currentPage === 'history' ? '#fff' : '' }}>
+              Chat History
+            </a>
+          )}
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+          {currentUser && (
+            <span style={{ color: '#a78bfa', fontSize: '0.95rem' }}>
+              Signed in as {currentUser.name || currentUser.email}
+            </span>
+          )}
+          <button
+            onClick={handleLogout}
+            style={{
+              background: 'transparent',
+              border: '1px solid rgba(255,255,255,0.18)',
+              color: '#fff',
+              padding: '8px 14px',
+              borderRadius: '999px',
+              cursor: 'pointer',
+            }}
+          >
+            Logout
+          </button>
         </div>
       </nav>
 
@@ -486,7 +670,7 @@ function App() {
 
       <div className="floating-widget-wrapper">
         <div className={`floating-chat-popup ${isChatOpen ? 'is-open' : ''}`}>
-           <ChatBox />
+           <ChatBox user={currentUser} />
         </div>
         <button 
           className="floating-fab" 
