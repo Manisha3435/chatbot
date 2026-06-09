@@ -221,7 +221,7 @@ const ContactPage = () => {
     setStatus('loading');
 
     try {
-      const res = await fetch('http://localhost:5000/api/contact', {
+      const res = await fetch('https://chatbot-83b2.onrender.com/api/contact', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(formData)
@@ -333,7 +333,7 @@ function App() {
     setLoginLoading(true);
 
     try {
-      const response = await fetch('http://localhost:5000/api/login', {
+      const response = await fetch('https://chatbot-83b2.onrender.com/api/login', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -383,7 +383,7 @@ function App() {
     setSignupSuccess('');
 
     try {
-      const response = await fetch('http://localhost:5000/api/signup', {
+      const response = await fetch('https://chatbot-83b2.onrender.com/api/signup', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
